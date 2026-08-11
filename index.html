@@ -3,9 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-width=1.0">
-    <title>Allwyn Tsirogiannis - QR σε Barcode POS</title>
+    <title>Allwyn Tsirogiannis - QR & OCR σε Barcode POS</title>
+    
+    <!-- Βιβλιοθήκες -->
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+    
     <style>
         body { font-family: Arial, sans-serif; text-align: center; padding: 20px; background-color: #f0f2f5; color: #333; }
         .container { max-width: 500px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
@@ -17,6 +21,7 @@
         #status-text { font-weight: bold; margin-bottom: 15px; font-size: 18px; }
         .error { color: #d9534f; }
         .success { color: #5cb85c; }
+        .warning { color: #f0ad4e; }
         #barcode-container { display: none; margin-top: 20px; padding: 15px; border: 2px dashed #ccc; border-radius: 8px; background: #fafafa; }
         #rf-text { font-size: 18px; font-weight: bold; letter-spacing: 1px; margin-bottom: 10px; word-break: break-all; }
         svg { max-width: 100%; height: auto; }
@@ -26,18 +31,23 @@
 <body>
     <div class="container">
         <h1>Σκανάρισμα Λογαριασμού</h1>
-        <p class="instructions">Πάτα το κουμπί, βγάλε φωτογραφία το QR του λογαριασμού και το Barcode θα εμφανιστεί.</p>
+        <p class="instructions">Βγάλε φωτογραφία το QR. Αν δεν έχει QR, βγάλε καθαρή φωτογραφία τον τυπωμένο κωδικό RF (π.χ. εφορία).</p>
+        
         <div class="upload-btn-wrapper">
             <button class="btn">📸 Άνοιγμα Κάμερας</button>
             <input type="file" id="file-input" accept="image/*">
         </div>
+        
         <p id="status-text"></p>
+        
         <div id="barcode-container">
             <p id="rf-text"></p>
             <svg id="barcode"></svg>
         </div>
     </div>
+
     <canvas id="canvas"></canvas>
+
     <script>
         const fileInput = document.getElementById('file-input');
         const canvas = document.getElementById('canvas');
@@ -46,11 +56,40 @@
         const barcodeContainer = document.getElementById('barcode-container');
         const rfText = document.getElementById('rf-text');
 
+        // Συνάρτηση που φιλτράρει το κείμενο, βρίσκει το RF και φτιάχνει το Barcode
+        function processRFText(text) {
+            // Ψάχνει R, μετά F, και μετά 23 νούμερα. Επιτρέπει κενά, τελείες και παύλες ενδιάμεσα.
+            const rfRegex = /R[\s\.\-_]*F[\s\.\-_]*(?:\d[\s\.\-_]*){23}/i;
+            const match = text.match(rfRegex);
+
+            if (match) {
+                // Αν το βρει, αφαιρεί τα κενά, τελείες, σύμβολα και κρατάει μόνο γράμματα/αριθμούς (25 χαρακτήρες)
+                const cleanRf = match[0].replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+                
+                statusText.innerText = "Ο κωδικός βρέθηκε επιτυχώς!";
+                statusText.className = "success";
+                barcodeContainer.style.display = "block";
+                rfText.innerText = cleanRf;
+                
+                JsBarcode("#barcode", cleanRf, {
+                    format: "CODE128",
+                    lineColor: "#000",
+                    width: 2.5,
+                    height: 120,
+                    displayValue: false,
+                    margin: 10
+                });
+            } else {
+                statusText.innerText = "Δεν εντοπίστηκε έγκυρος κωδικός RF στην εικόνα. Δοκίμασε πιο κοντινή/καθαρή φωτογραφία.";
+                statusText.className = "error";
+            }
+        }
+
         fileInput.addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (!file) return;
 
-            statusText.innerText = "Επεξεργασία εικόνας...";
+            statusText.innerText = "Επεξεργασία εικόνας... Ψάχνω για QR Code.";
             statusText.className = "";
             barcodeContainer.style.display = "none";
 
@@ -58,6 +97,7 @@
             reader.onload = function(event) {
                 const img = new Image();
                 img.onload = function() {
+                    // Μικραίνουμε την εικόνα για να μην κολλάει το κινητό
                     const max_size = 1000;
                     let width = img.width;
                     let height = img.height;
@@ -74,35 +114,31 @@
 
                     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
                     
+                    // 1. Δοκιμή ανάγνωσης QR Code
                     const code = jsQR(imageData.data, imageData.width, imageData.height, {
                         inversionAttempts: "dontInvert",
                     });
 
                     if (code) {
-                        const rfMatch = code.data.match(/RF\d{23}/);
-                        if (rfMatch) {
-                            const rfCode = rfMatch[0];
-                            statusText.innerText = "Ο κωδικός βρέθηκε επιτυχώς!";
-                            statusText.className = "success";
-                            
-                            barcodeContainer.style.display = "block";
-                            rfText.innerText = rfCode;
-                            
-                            JsBarcode("#barcode", rfCode, {
-                                format: "CODE128",
-                                lineColor: "#000",
-                                width: 2.5,
-                                height: 120,
-                                displayValue: false,
-                                margin: 10
-                            });
-                        } else {
-                            statusText.innerText = "Το QR διαβάστηκε, αλλά δεν έχει κωδικό RF.";
-                            statusText.className = "error";
-                        }
+                        // Αν βρει QR, στέλνει το κείμενο για καθάρισμα/εμφάνιση
+                        processRFText(code.data);
                     } else {
-                        statusText.innerText = "Δεν βρέθηκε QR. Βγάλε πιο κοντινή/καθαρή φώτο.";
-                        statusText.className = "error";
+                        // 2. Αν ΔΕΝ βρει QR, δοκιμάζει ανάγνωση απλού κειμένου (OCR)
+                        statusText.innerText = "Δεν βρέθηκε QR. Γίνεται ανάγνωση γραμμάτων (μπορεί να πάρει 3-4 δευτερόλεπτα)...";
+                        statusText.className = "warning";
+                        
+                        // Χρήση του Tesseract.js για αναγνώριση κειμένου
+                        Tesseract.recognize(
+                            img.src,
+                            'eng', // Τα RF και οι αριθμοί είναι αγγλικοί χαρακτήρες
+                            { logger: m => console.log(m) }
+                        ).then(({ data: { text } }) => {
+                            processRFText(text);
+                        }).catch(err => {
+                            statusText.innerText = "Σφάλμα κατά την ανάγνωση κειμένου. Προσπάθησε ξανά.";
+                            statusText.className = "error";
+                            console.error(err);
+                        });
                     }
                 };
                 img.src = event.target.result;
