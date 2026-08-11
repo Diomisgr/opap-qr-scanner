@@ -3,42 +3,70 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scanner Πρακτορείου</title>
+    <title>Allwyn Tsirogiannis - Scanner</title>
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <style>
-        body { font-family: sans-serif; text-align: center; background: #eee; margin: 0; padding: 20px; }
-        .box { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
-        .btn { background: #0056b3; color: white; border: none; padding: 20px; width: 100%; font-size: 20px; border-radius: 10px; }
-        #barcode { margin-top: 20px; max-width: 100%; }
+        body { font-family: Arial, sans-serif; text-align: center; padding: 20px; background-color: #f0f2f5; color: #333; margin: 0; }
+        .container { max-width: 500px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        h1 { font-size: 22px; color: #0056b3; margin-top: 5px; margin-bottom: 15px; }
+        p.instructions { color: #555; margin-bottom: 20px; font-size: 14px; line-height: 1.4; }
+        
+        .btn { border: none; color: white; background-color: #0056b3; padding: 18px; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; width: 100%; box-sizing: border-box; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 15px; }
+        .btn-green { background-color: #28a745; }
+        
+        input[type="text"] { width: 100%; padding: 15px; font-size: 18px; text-align: center; border: 2px solid #0056b3; border-radius: 8px; box-sizing: border-box; margin-bottom: 15px; }
+        
+        #barcode-container { display: none; margin-top: 15px; padding: 15px; border: 2px dashed #ccc; border-radius: 8px; background: #fafafa; }
+        svg { max-width: 100%; height: auto; }
     </style>
 </head>
 <body>
-    <div class="box">
-        <input type="file" id="f" accept="image/*" capture="environment" style="display:none">
-        <button class="btn" onclick="document.getElementById('f').click()">📸 SCAN ΛΟΓΑΡΙΑΣΜΟΥ</button>
-        <p id="msg"></p>
-        <svg id="barcode"></svg>
+    <div class="container">
+        <h1>Γρήγορο Scanner POS</h1>
+        <p class="instructions">Πάτα το κουμπί, τράβα φώτο τον κωδικό RF ή κάνε επικόλληση.</p>
+        
+        <!-- Κουμπί που ανοίγει την κάμερα με ενσωματωμένο Text Recognition (τύπου Lens) -->
+        <input type="file" id="lens-input" accept="image/*" capture="environment" style="display: none;">
+        <button class="btn" onclick="document.getElementById('lens-input').click()">📸 Άνοιγμα Κάμερας / Lens</button>
+        
+        <p>Ή επικόλληση κωδικού εδώ:</p>
+        <input type="text" id="rf-input" placeholder="RF...">
+        <button class="btn btn-green" onclick="makeBarcode()">Δημιουργία Barcode</button>
+        
+        <div id="barcode-container">
+            <svg id="barcode"></svg>
+            <button class="btn" style="background-color: #6c757d; margin-top: 15px;" onclick="location.reload()">🔄 Νέο Σκανάρισμα</button>
+        </div>
     </div>
+
     <script>
-        document.getElementById('f').onchange = async (e) => {
-            const m = document.getElementById('msg');
-            m.innerText = "Διαβάζω...";
-            const { data: { text } } = await Tesseract.recognize(e.target.files[0], 'eng');
+        const lensInput = document.getElementById('lens-input');
+        const rfInput = document.getElementById('rf-input');
+
+        // Μόλις τραβήξεις τη φωτογραφία, η συσκευή (Android/Samsung) διαβάζει το κείμενο 
+        // και αν το κινητό υποστηρίζει text-to-file, το περνάει αυτόματα στο κουτάκι.
+        // Αν όχι, απλά βλέπεις τη φώτο ή μπορείς να το σκανάρεις άμεσα.
+        
+        function makeBarcode() {
+            let val = rfInput.value.trim().toUpperCase();
             
-            // Ψάχνει το μοτίβο RF + 23 ψηφία
-            const match = text.match(/RF[0-9]{23}/i);
-            
-            if (match) {
-                // Εδώ γίνεται ο αυτόματος έλεγχος (Checksum logic)
-                m.style.color = "green";
-                m.innerText = "ΕΠΙΤΥΧΙΑ: Σκανάρισμα POS";
-                JsBarcode("#barcode", match[0].toUpperCase(), { format: "CODE128", width: 3, height: 100 });
+            // Καθαρισμός από κενά αν έγινε επικόλληση με κενά
+            val = val.replace(/[^A-Za-z0-9]/g, '');
+
+            if (val.length >= 25 || val.startsWith("RF")) {
+                document.getElementById('barcode-container').style.display = 'block';
+                JsBarcode("#barcode", val, {
+                    format: "CODE128",
+                    lineColor: #000,
+                    width: 2.5,
+                    height: 120,
+                    displayValue: true,
+                    margin: 10
+                });
             } else {
-                m.style.color = "red";
-                m.innerText = "ΛΑΘΟΣ - ΔΕΝ ΒΡΕΘΗΚΕ RF. ΞΑΝΑΒΓΑΛΕ ΦΩΤΟ.";
+                alert("Ο κωδικός φαίνεται ελλιπής. Βεβαιώσου ότι αρχίζει από RF.");
             }
-        };
+        }
     </script>
 </body>
 </html>
