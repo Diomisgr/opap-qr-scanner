@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-width=1.0">
+    <title>Allwyn Tsirogiannis - QR σε Barcode POS</title>
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; padding: 20px; background-color: #f0f2f5; color: #333; }
+        .container { max-width: 500px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        h1 { font-size: 24px; color: #0056b3; }
+        p.instructions { color: #555; margin-bottom: 20px; }
+        .upload-btn-wrapper { position: relative; overflow: hidden; display: inline-block; margin-bottom: 20px; width: 100%; }
+        .btn { border: 2px solid #0056b3; color: white; background-color: #0056b3; padding: 15px 20px; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; width: 100%; box-sizing: border-box; }
+        .upload-btn-wrapper input[type=file] { font-size: 100px; position: absolute; left: 0; top: 0; opacity: 0; cursor: pointer; height: 100%; width: 100%; }
+        #status-text { font-weight: bold; margin-bottom: 15px; font-size: 18px; }
+        .error { color: #d9534f; }
+        .success { color: #5cb85c; }
+        #barcode-container { display: none; margin-top: 20px; padding: 15px; border: 2px dashed #ccc; border-radius: 8px; background: #fafafa; }
+        #rf-text { font-size: 18px; font-weight: bold; letter-spacing: 1px; margin-bottom: 10px; word-break: break-all; }
+        svg { max-width: 100%; height: auto; }
+        canvas { display: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Σκανάρισμα Λογαριασμού</h1>
+        <p class="instructions">Πάτα το κουμπί, βγάλε φωτογραφία το QR του λογαριασμού και το Barcode θα εμφανιστεί.</p>
+        <div class="upload-btn-wrapper">
+            <button class="btn">📸 Άνοιγμα Κάμερας</button>
+            <input type="file" id="file-input" accept="image/*">
+        </div>
+        <p id="status-text"></p>
+        <div id="barcode-container">
+            <p id="rf-text"></p>
+            <svg id="barcode"></svg>
+        </div>
+    </div>
+    <canvas id="canvas"></canvas>
+    <script>
+        const fileInput = document.getElementById('file-input');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        const statusText = document.getElementById('status-text');
+        const barcodeContainer = document.getElementById('barcode-container');
+        const rfText = document.getElementById('rf-text');
+
+        fileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            statusText.innerText = "Επεξεργασία εικόνας...";
+            statusText.className = "";
+            barcodeContainer.style.display = "none";
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const img = new Image();
+                img.onload = function() {
+                    const max_size = 1000;
+                    let width = img.width;
+                    let height = img.height;
+                    
+                    if (width > max_size || height > max_size) {
+                        const ratio = Math.min(max_size / width, max_size / height);
+                        width = width * ratio;
+                        height = height * ratio;
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    
+                    const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                        inversionAttempts: "dontInvert",
+                    });
+
+                    if (code) {
+                        const rfMatch = code.data.match(/RF\d{23}/);
+                        if (rfMatch) {
+                            const rfCode = rfMatch[0];
+                            statusText.innerText = "Ο κωδικός βρέθηκε επιτυχώς!";
+                            statusText.className = "success";
+                            
+                            barcodeContainer.style.display = "block";
+                            rfText.innerText = rfCode;
+                            
+                            JsBarcode("#barcode", rfCode, {
+                                format: "CODE128",
+                                lineColor: "#000",
+                                width: 2.5,
+                                height: 120,
+                                displayValue: false,
+                                margin: 10
+                            });
+                        } else {
+                            statusText.innerText = "Το QR διαβάστηκε, αλλά δεν έχει κωδικό RF.";
+                            statusText.className = "error";
+                        }
+                    } else {
+                        statusText.innerText = "Δεν βρέθηκε QR. Βγάλε πιο κοντινή/καθαρή φώτο.";
+                        statusText.className = "error";
+                    }
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+    </script>
+</body>
+</html>
