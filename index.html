@@ -2,43 +2,53 @@
 <html lang="el">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scanner Πρακτορείου</title>
+    <title>Scanner POS</title>
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <style>
-        body { font-family: sans-serif; text-align: center; background: #eee; margin: 0; padding: 20px; }
-        .box { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
-        .btn { background: #0056b3; color: white; border: none; padding: 20px; width: 100%; font-size: 20px; border-radius: 10px; }
-        #barcode { margin-top: 20px; max-width: 100%; }
+        body { font-family: sans-serif; text-align: center; padding: 20px; background: #eee; }
+        .box { background: white; padding: 20px; border-radius: 15px; }
+        button { background: #0056b3; color: white; padding: 20px; width: 100%; border-radius: 10px; border:none; font-size: 20px; }
+        #msg { font-weight: bold; margin: 15px 0; font-size: 18px; }
     </style>
 </head>
 <body>
     <div class="box">
         <input type="file" id="f" accept="image/*" capture="environment" style="display:none">
-        <button class="btn" onclick="document.getElementById('f').click()">📸 SCAN ΛΟΓΑΡΙΑΣΜΟΥ</button>
+        <button onclick="document.getElementById('f').click()">📸 SCAN ΛΟΓΑΡΙΑΣΜΟΥ</button>
         <p id="msg"></p>
         <svg id="barcode"></svg>
     </div>
     <script>
         document.getElementById('f').onchange = async (e) => {
             const m = document.getElementById('msg');
-            m.innerText = "Διαβάζω...";
+            m.innerText = "Ανάγνωση...";
             const { data: { text } } = await Tesseract.recognize(e.target.files[0], 'eng');
-            
-            // Ψάχνει το μοτίβο RF + 23 ψηφία
             const match = text.match(/RF[0-9]{23}/i);
             
             if (match) {
-                // Εδώ γίνεται ο αυτόματος έλεγχος (Checksum logic)
-                m.style.color = "green";
-                m.innerText = "ΕΠΙΤΥΧΙΑ: Σκανάρισμα POS";
-                JsBarcode("#barcode", match[0].toUpperCase(), { format: "CODE128", width: 3, height: 100 });
+                const rf = match[0].toUpperCase();
+                // Μαθηματικός Έλεγχος (Checksum Check)
+                if (validateRF(rf)) {
+                    m.style.color = "green";
+                    m.innerText = "ΕΠΙΤΥΧΙΑ! Σκανάρισέ το.";
+                    JsBarcode("#barcode", rf, { format: "CODE128", width: 3, height: 100 });
+                } else {
+                    m.style.color = "red";
+                    m.innerText = "ΛΑΘΟΣ ΚΩΔΙΚΟΣ! (Η κάμερα μπερδεύτηκε) - ΞΑΝΑΒΓΑΛΕ ΦΩΤΟ";
+                }
             } else {
                 m.style.color = "red";
-                m.innerText = "ΛΑΘΟΣ - ΔΕΝ ΒΡΕΘΗΚΕ RF. ΞΑΝΑΒΓΑΛΕ ΦΩΤΟ.";
+                m.innerText = "ΔΕΝ ΒΡΕΘΗΚΕ ΚΩΔΙΚΟΣ RF. ΞΑΝΑΒΓΑΛΕ.";
             }
         };
+
+        function validateRF(rf) {
+            // Μετατροπή RF σε αριθμό για έλεγχο Modulo 97
+            let code = rf.substring(4) + "2715" + rf.substring(2, 4);
+            let n = BigInt(code);
+            return (n % 97n === 1n);
+        }
     </script>
 </body>
 </html>
