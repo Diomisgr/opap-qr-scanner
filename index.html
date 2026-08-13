@@ -13,8 +13,8 @@
         
         input[type="text"] { width: 100%; padding: 18px; font-size: 20px; text-align: center; border: 2px solid #0056b3; border-radius: 8px; box-sizing: border-box; margin-bottom: 15px; letter-spacing: 1px; }
         
-        .btn { border: none; color: white; background-color: #28a745; padding: 18px; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; width: 100%; box-sizing: border-box; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 10px; text-decoration: none; display: inline-block; }
-        .btn-lens { background-color: #4285F4; }
+        .btn { border: none; color: white; background-color: #28a745; padding: 18px; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; width: 100%; box-sizing: border-box; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 10px; }
+        .btn-lens { background-color: #0056b3; }
         
         #barcode-container { display: none; margin-top: 20px; padding: 15px; border: 2px dashed #ccc; border-radius: 8px; background: #fafafa; }
         svg { max-width: 100%; height: auto; }
@@ -23,13 +23,13 @@
 <body>
     <div class="container">
         <h1>Γρήγορο POS Barcode</h1>
-        <p class="instructions">Κάνε επικόλληση τον κωδικό RF ή πάτησε το Google Lens για σάρωση.</p>
+        <p class="instructions">Κάνε επικόλληση τον κωδικό RF ή τράβα μια φώτο με το Lens για γρήγορη αντιγραφή.</p>
         
         <input type="text" id="rf-input" placeholder="Επικόλληση εδώ (RF...)" autocomplete="off">
         <button class="btn" onclick="makeBarcode()">Δημιουργία Barcode</button>
         
-        <!-- Κουμπί άμεσης εκκίνησης Google Lens μέσω Android Intent -->
-        <a id="lens-link" class="btn btn-lens" href="intent://lens.google.com/#Intent;package=com.google.android.googlequicksearchbox;action=android.intent.action.VIEW;end;">🔍 Άνοιγμα Google Lens</a>
+        <input type="file" id="lens-file" accept="image/*" capture="environment" style="display:none;" onchange="alert('Τώρα κάνε αντιγραφή τον κωδικό από τη φωτογραφία και επικόλληση στο πάνω κουτάκι!')">
+        <button class="btn btn-lens" onclick="document.getElementById('lens-file').click()">📸 Φωτογραφία για Αντιγραφή</button>
         
         <div id="barcode-container">
             <svg id="barcode"></svg>
