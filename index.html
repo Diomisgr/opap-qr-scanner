@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Allwyn Tsirogiannis - POS Barcode</title>
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js"></script>
+    <!-- Ενσωμάτωση βιβλιοθήκης Tesseract.js για αυτόματη ανάγνωση κειμένου από φωτογραφία -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <style>
         body { font-family: Arial, sans-serif; text-align: center; padding: 20px; background-color: #f0f2f5; color: #333; margin: 0; }
         .container { max-width: 500px; margin: 0 auto; background: #fff; padding: 25px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
@@ -16,6 +18,7 @@
         .btn { border: none; color: white; background-color: #28a745; padding: 18px; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; width: 100%; box-sizing: border-box; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 10px; }
         .btn-lens { background-color: #0056b3; }
         
+        #loading { display: none; font-weight: bold; color: #0056b3; margin: 15px 0; font-size: 16px; }
         #barcode-container { display: none; margin-top: 20px; padding: 15px; border: 2px dashed #ccc; border-radius: 8px; background: #fafafa; }
         svg { max-width: 100%; height: auto; }
     </style>
@@ -23,14 +26,16 @@
 <body>
     <div class="container">
         <h1>Γρήγορο POS Barcode</h1>
-        <p class="instructions">Κάνε επικόλληση τον κωδικό RF ή τράβα μια φώτο με το Lens για γρήγορη αντιγραφή.</p>
+        <p class="instructions">Κάνε επικόλληση τον κωδικό RF ή τράβα φωτογραφία για αυτόματη ανάγνωση.</p>
         
         <input type="text" id="rf-input" placeholder="Επικόλληση εδώ (RF...)" autocomplete="off">
         <button class="btn" onclick="makeBarcode()">Δημιουργία Barcode</button>
         
-        <input type="file" id="lens-file" accept="image/*" capture="environment" style="display:none;" onchange="alert('Τώρα κάνε αντιγραφή τον κωδικό από τη φωτογραφία και επικόλληση στο πάνω κουτάκι!')">
-        <button class="btn btn-lens" onclick="document.getElementById('lens-file').click()">📸 Φωτογραφία για Αντιγραφή</button>
+        <input type="file" id="lens-file" accept="image/*" capture="environment" style="display:none;" onchange="processImage(this)">
+        <button class="btn btn-lens" onclick="document.getElementById('lens-file').click()">📸 Φωτογραφία & Αυτόματη Ανάγνωση</button>
         
+        <div id="loading">⏳ Ανάγνωση κωδικού από τη φωτογραφία...</div>
+
         <div id="barcode-container">
             <svg id="barcode"></svg>
             <button class="btn" style="background-color: #6c757d; margin-top: 15px;" onclick="resetScanner()">🔄 Νέο Σκανάρισμα</button>
@@ -39,13 +44,6 @@
 
     <script>
         const rfInput = document.getElementById('rf-input');
-
-        // Αυτόματη ανίχνευση επικόλλησης (Paste) για άμεση δημιουργία barcode
-        rfInput.addEventListener('paste', function(e) {
-            setTimeout(() => {
-                makeBarcode();
-            }, 100);
-        });
 
         function makeBarcode() {
             let val = rfInput.value.trim().toUpperCase();
@@ -66,16 +64,41 @@
             }
         }
 
+        async function processImage(input) {
+            if (input.files && input.files[0]) {
+                const file = input.files[0];
+                document.getElementById('loading').style.display = 'block';
+                document.getElementById('barcode-container').style.display = 'none';
+
+                try {
+                    // Χρήση Tesseract OCR για εξαγωγή κειμένου από τη φωτογραφία
+                    const result = await Tesseract.recognize(file, 'eng');
+                    let text = result.data.text;
+                    
+                    // Καθαρισμός κειμένου (κρατάμε μόνο γράμματα και αριθμούς)
+                    let cleanText = text.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+
+                    if (cleanText.length >= 20) {
+                        rfInput.value = cleanText;
+                        document.getElementById('loading').style.display = 'none';
+                        makeBarcode();
+                    } else {
+                        document.getElementById('loading').style.display = 'none';
+                        alert("Δεν μπόρεσα να διαβάσω καθαρά τον κωδικό. Δοκίμασε να ξανατραβήξεις πιο κοντινή φωτογραφία ή κάνε επικόλληση.");
+                    }
+                } catch (error) {
+                    document.getElementById('loading').style.display = 'none';
+                    alert("Προέκυψε σφάλμα κατά την επεξεργασία της εικόνας.");
+                }
+            }
+        }
+
         function resetScanner() {
             rfInput.value = "";
             document.getElementById('barcode-container').style.display = 'none';
+            document.getElementById('lens-file').value = "";
             rfInput.focus();
         }
-
-        // Αυτόματο focus κατά τη φόρτωση της σελίδας
-        window.onload = function() {
-            rfInput.focus();
-        };
     </script>
 </body>
 </html>
