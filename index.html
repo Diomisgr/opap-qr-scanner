@@ -28,7 +28,6 @@
         <input type="text" id="rf-input" placeholder="Επικόλληση εδώ (RF...)" autocomplete="off">
         <button class="btn" onclick="makeBarcode()">Δημιουργία Barcode</button>
         
-        <!-- Κουμπί που βοηθάει στο άνοιγμα της κάμερας/lens -->
         <input type="file" id="lens-file" accept="image/*" capture="environment" style="display:none;" onchange="alert('Τώρα κάνε αντιγραφή τον κωδικό από τη φωτογραφία και επικόλληση στο πάνω κουτάκι!')">
         <button class="btn btn-lens" onclick="document.getElementById('lens-file').click()">📸 Φωτογραφία για Αντιγραφή</button>
         
@@ -40,6 +39,13 @@
 
     <script>
         const rfInput = document.getElementById('rf-input');
+
+        // Αυτόματη ανίχνευση επικόλλησης (Paste) για άμεση δημιουργία barcode
+        rfInput.addEventListener('paste', function(e) {
+            setTimeout(() => {
+                makeBarcode();
+            }, 100);
+        });
 
         function makeBarcode() {
             let val = rfInput.value.trim().toUpperCase();
@@ -65,6 +71,11 @@
             document.getElementById('barcode-container').style.display = 'none';
             rfInput.focus();
         }
+
+        // Αυτόματο focus κατά τη φόρτωση της σελίδας
+        window.onload = function() {
+            rfInput.focus();
+        };
     </script>
 </body>
 </html>
