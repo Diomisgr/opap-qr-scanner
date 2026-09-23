@@ -1,69 +1,85 @@
 <!DOCTYPE html>
 <html lang="el">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Allwyn Tsirogiannis - POS Barcode</title>
-    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js"></script>
-    <style>
-        body { font-family: Arial, sans-serif; text-align: center; padding: 20px; background-color: #f0f2f5; color: #333; margin: 0; }
-        .container { max-width: 500px; margin: 0 auto; background: #fff; padding: 25px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        h1 { font-size: 22px; color: #0056b3; margin-top: 0; margin-bottom: 10px; }
-        p.instructions { color: #555; margin-bottom: 20px; font-size: 15px; line-height: 1.4; }
-        
-        input[type="text"] { width: 100%; padding: 18px; font-size: 20px; text-align: center; border: 2px solid #0056b3; border-radius: 8px; box-sizing: border-box; margin-bottom: 15px; letter-spacing: 1px; }
-        
-        .btn { border: none; color: white; background-color: #28a745; padding: 18px; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; width: 100%; box-sizing: border-box; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 10px; }
-        .btn-lens { background-color: #0056b3; }
-        
-        #barcode-container { display: none; margin-top: 20px; padding: 15px; border: 2px dashed #ccc; border-radius: 8px; background: #fafafa; }
-        svg { max-width: 100%; height: auto; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Allwyn Tsirogiannis - POS Barcode</title>
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<style>
+body{font-family:Arial,sans-serif;text-align:center;padding:15px;background:#f0f2f5;color:#333;margin:0}
+.container{max-width:600px;margin:0 auto;background:#fff;padding:20px;border-radius:12px;box-shadow:0 4px 10px rgba(0,0,0,.1)}
+h1{font-size:22px;color:#0056b3;margin:0 0 10px}
+p{color:#555;line-height:1.4}
+input[type=text]{width:100%;padding:16px;font-size:20px;text-align:center;border:2px solid #0056b3;border-radius:8px;box-sizing:border-box;margin-bottom:12px}
+.btn{border:0;color:#fff;background:#28a745;padding:16px;border-radius:8px;font-size:18px;font-weight:bold;width:100%;box-sizing:border-box;margin-bottom:10px}
+.btn-blue{background:#0056b3}.btn-gray{background:#6c757d}
+#camera{width:100%;border-radius:10px;background:#111;display:none}
+.scanbox{position:relative;margin:10px 0;display:none}
+.scanbox:after{content:"";position:absolute;left:8%;right:8%;top:35%;height:30%;border:3px solid #22c55e;border-radius:8px;box-shadow:0 0 0 9999px rgba(0,0,0,.45);pointer-events:none}
+#status{font-weight:bold;margin:10px 0}
+#barcode-container{display:none;margin-top:15px;padding:12px;border:2px dashed #ccc;border-radius:8px;background:#fafafa}
+svg{max-width:100%;height:auto}
+</style>
 </head>
 <body>
-    <div class="container">
-        <h1>Γρήγορο POS Barcode</h1>
-        <p class="instructions">Κάνε επικόλληση τον κωδικό RF ή τράβα μια φώτο με το Lens για γρήγορη αντιγραφή.</p>
-        
-        <input type="text" id="rf-input" placeholder="Επικόλληση εδώ (RF...)" autocomplete="off">
-        <button class="btn" onclick="makeBarcode()">Δημιουργία Barcode</button>
-        
-        <input type="file" id="lens-file" accept="image/*" capture="environment" style="display:none;" onchange="alert('Τώρα κάνε αντιγραφή τον κωδικό από τη φωτογραφία και επικόλληση στο πάνω κουτάκι!')">
-        <button class="btn btn-lens" onclick="document.getElementById('lens-file').click()">📸 Φωτογραφία για Αντιγραφή</button>
-        
-        <div id="barcode-container">
-            <svg id="barcode"></svg>
-            <button class="btn" style="background-color: #6c757d; margin-top: 15px;" onclick="resetScanner()">🔄 Νέο Σκανάρισμα</button>
-        </div>
-    </div>
-
-    <script>
-        const rfInput = document.getElementById('rf-input');
-
-        function makeBarcode() {
-            let val = rfInput.value.trim().toUpperCase();
-            val = val.replace(/[^A-Za-z0-9]/g, '');
-
-            if (val.length >= 20) {
-                document.getElementById('barcode-container').style.display = 'block';
-                JsBarcode("#barcode", val, {
-                    format: "CODE128",
-                    lineColor: "#000",
-                    width: 3,
-                    height: 130,
-                    displayValue: true,
-                    margin: 10
-                });
-            } else {
-                alert("Ο κωδικός φαίνεται ελλιπής. Βεβαιώσου ότι έκανες σωστή επικόλληση.");
-            }
-        }
-
-        function resetScanner() {
-            rfInput.value = "";
-            document.getElementById('barcode-container').style.display = 'none';
-            rfInput.focus();
-        }
-    </script>
+<div class="container">
+<h1>Γρήγορο POS Barcode</h1>
+<p>Άνοιξε την κάμερα και στόχευσε τους τυπωμένους αριθμούς. Η εφαρμογή προσπαθεί να τους διαβάσει αυτόματα.</p>
+<div class="scanbox" id="scanbox"><video id="camera" autoplay playsinline muted></video></div>
+<button class="btn btn-blue" id="openBtn" onclick="openCamera()">📷 Άνοιγμα Κάμερας</button>
+<button class="btn" id="readBtn" onclick="readNumbers()" style="display:none">🔎 ΔΙΑΒΑΣΕ ΑΡΙΘΜΟΥΣ</button>
+<div id="status"></div>
+<input type="text" id="rf-input" placeholder="Ο κωδικός θα εμφανιστεί εδώ" autocomplete="off">
+<button class="btn" onclick="makeBarcode()">Δημιουργία Barcode</button>
+<div id="barcode-container">
+<svg id="barcode"></svg>
+<button class="btn btn-gray" onclick="resetScanner()">🔄 Νέο Σκανάρισμα</button>
+</div>
+</div>
+<script>
+let stream=null;
+const video=document.getElementById('camera'),statusEl=document.getElementById('status'),input=document.getElementById('rf-input');
+async function openCamera(){
+ try{
+  stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}},audio:false});
+  video.srcObject=stream;
+  document.getElementById('scanbox').style.display='block';
+  video.style.display='block';
+  document.getElementById('openBtn').style.display='none';
+  document.getElementById('readBtn').style.display='block';
+  statusEl.textContent='Κάμερα ενεργή — βάλε τους αριθμούς μέσα στο πράσινο πλαίσιο.';
+ }catch(e){statusEl.textContent='Δεν δόθηκε άδεια στην κάμερα. Έλεγξε την άδεια κάμερας του Chrome.';console.error(e)}
+}
+function cleanText(s){return s.toUpperCase().replace(/[^A-Z0-9]/g,'')}
+async function readNumbers(){
+ if(!video.videoWidth){statusEl.textContent='Περίμενε να ανοίξει η κάμερα.';return}
+ statusEl.textContent='Διαβάζω τους αριθμούς...';
+ const canvas=document.createElement('canvas');
+ const w=video.videoWidth,h=video.videoHeight;
+ canvas.width=w;canvas.height=Math.floor(h*.42);
+ const ctx=canvas.getContext('2d');
+ ctx.drawImage(video,0,Math.floor(h*.29),w,canvas.height,0,0,w,canvas.height);
+ try{
+  const result=await Tesseract.recognize(canvas,'eng',{logger:m=>{if(m.status==='recognizing text')statusEl.textContent='OCR '+Math.round(m.progress*100)+'%...'}});
+  const val=cleanText(result.data.text);
+  if(val.length>=20){input.value=val;statusEl.textContent='Βρέθηκε κωδικός. Έλεγξέ τον και πάτησε «Δημιουργία Barcode».';makeBarcode()}
+  else{statusEl.textContent='Δεν διαβάστηκε αρκετά καθαρά. Κράτησε το κινητό σταθερό και ξαναπάτησε «ΔΙΑΒΑΣΕ ΑΡΙΘΜΟΥΣ».'}
+ }catch(e){statusEl.textContent='Σφάλμα OCR. Δοκίμασε ξανά.';console.error(e)}
+}
+function makeBarcode(){
+ let val=cleanText(input.value);
+ if(val.length<20){alert('Ο κωδικός φαίνεται ελλιπής.');return}
+ input.value=val;
+ document.getElementById('barcode-container').style.display='block';
+ JsBarcode('#barcode',val,{format:'CODE128',lineColor:'#000',width:2.5,height:130,displayValue:true,margin:10});
+}
+function resetScanner(){
+ if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}
+ video.srcObject=null;input.value='';document.getElementById('barcode-container').style.display='none';
+ document.getElementById('scanbox').style.display='none';document.getElementById('openBtn').style.display='block';
+ document.getElementById('readBtn').style.display='none';statusEl.textContent='';
+}
+</script>
 </body>
 </html>
