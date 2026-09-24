@@ -37,6 +37,11 @@ input[type=text]{width:100%;padding:16px;font-size:20px;text-align:center;border
 <button class="btn btn-blue" onclick="copyOCR()" style="margin-top:8px">📋 ΑΝΤΙΓΡΑΦΗ OCR</button>
 <p style="font-size:14px;margin:6px 0 0">Μετά την αντιγραφή, πάτησε «ΕΠΙΚΟΛΛΗΣΗ» για να βάλουμε ακριβώς το κείμενο στον κωδικό.</p>
 </div>
+<div id="ocrBox" style="display:none;text-align:left;background:#f7f7f7;border-radius:8px;padding:12px;margin:10px 0">
+<b>1️⃣ Επίλεξε με το δάχτυλο τον σωστό αριθμό από το κείμενο:</b>
+<div id="ocrText" style="margin-top:8px;background:#fff;border:1px solid #ccc;border-radius:8px;padding:12px;font-size:19px;line-height:1.7;user-select:text;-webkit-user-select:text;word-break:break-word;white-space:pre-wrap"></div>
+<button class="btn btn-blue" onclick="useSelectedText()" style="margin-top:10px">✅ ΧΡΗΣΗ ΕΠΙΛΕΓΜΕΝΟΥ ΑΡΙΘΜΟΥ</button>
+</div>
 <div id="detected" style="display:none;text-align:left;background:#f7f7f7;border-radius:8px;padding:12px;margin:10px 0"></div>
 <div id="cutHelp" style="display:none;text-align:left;background:#fff3cd;border-radius:8px;padding:10px;margin:10px 0;font-size:14px">
 <b>✂️ Διόρθωση τέλους:</b> Αν ο OCR πήρε παραπάνω ψηφία, πάτησε πάνω στον τελευταίο σωστό χαρακτήρα. Ο κωδικός θα κοπεί εκεί.
@@ -184,6 +189,39 @@ function findAmount(raw){
        ||raw.match(/([0-9]{1,6}[.,][0-9]{2})\s*(?:€|EUR)/i)
        ||raw.match(/(?:ΠΟΣΟ|AMOUNT|ΣΥΝΟΛΟ)\s*[:\-]?\s*([0-9]{1,6}[.,][0-9]{2})/i);
  return m?m[1]+' €':'';
+}
+function showOCRText(raw){
+ const box=document.getElementById('ocrBox');
+ const out=document.getElementById('ocrText');
+ box.style.display='block';
+ out.textContent=raw||'Δεν διαβάστηκε κείμενο.';
+}
+function useSelectedText(){
+ const sel=window.getSelection();
+ const selected=(sel?sel.toString():'').trim();
+ if(!selected){
+   alert('Πρώτα επίλεξε με παρατεταμένο πάτημα τον αριθμό μέσα στο κείμενο.');
+   return;
+ }
+ const normalized=normalizeOCR(selected);
+ const rf=normalized.match(/RF\s*[:\-]?\s*([0-9][0-9\s\-]{15,})/i);
+ let code='';
+ if(rf){
+   const digits=rf[1].replace(/[^0-9]/g,'');
+   if(digits.length>=16) code='RF'+digits;
+ }
+ if(!code){
+   const nums=(selected.match(/\d[\d\s\-]*/g)||[]).map(x=>x.replace(/[^0-9]/g,'')).filter(x=>x.length>=4);
+   if(nums.length) code=nums.join('');
+ }
+ if(!code){
+   alert('Δεν βρήκα αριθμό στην επιλογή. Επίλεξε μόνο τον κωδικό.');
+   return;
+ }
+ input.value=code;
+ document.getElementById('detected').style.display='none';
+ statusEl.textContent='Επέλεξες τον κωδικό: '+code+' — έλεγξέ τον και πάτησε «Δημιουργία Barcode».';
+ makeBarcode();
 }
 function showDetected(found){
  const box=document.getElementById('detected');
