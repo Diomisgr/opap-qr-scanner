@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>Allwyn Tsirogiannis - POS Barcode</title>
-<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <style>
 body{font-family:Arial,sans-serif;text-align:center;padding:15px;background:#f0f2f5;color:#333;margin:0}
@@ -19,7 +18,7 @@ input[type=text]{width:100%;padding:16px;font-size:20px;text-align:center;border
 .scanbox:after{content:"";position:absolute;left:8%;right:8%;top:35%;height:30%;border:3px solid #22c55e;border-radius:8px;box-shadow:0 0 0 9999px rgba(0,0,0,.45);pointer-events:none}
 #status{font-weight:bold;margin:10px 0}
 #barcode-container{display:none;margin-top:15px;padding:12px;border:2px dashed #ccc;border-radius:8px;background:#fafafa}
-svg{max-width:100%;height:auto}
+
 </style>
 </head>
 <body>
@@ -34,7 +33,7 @@ svg{max-width:100%;height:auto}
 <input type="text" id="rf-input" placeholder="Ο κωδικός θα εμφανιστεί εδώ" autocomplete="off">
 <button class="btn" onclick="makeBarcode()">Δημιουργία Barcode</button>
 <div id="barcode-container">
-<svg id="barcode"></svg>
+<img id="barcodeImg" style="display:block;max-width:100%;height:auto;margin:auto" alt="CODE 128">
 <button class="btn btn-gray" onclick="resetScanner()">🔄 Νέο Σκανάρισμα</button>
 </div>
 </div>
@@ -127,7 +126,9 @@ function makeBarcode(){
  if(val.length<20){alert('Ο κωδικός φαίνεται ελλιπής.');return}
  input.value=val;
  document.getElementById('barcode-container').style.display='block';
- JsBarcode('#barcode',val,{format:'CODE128',lineColor:'#000',width:2.5,height:130,displayValue:true,margin:10});
+ const img=document.getElementById('barcodeImg');
+ img.src='https://bwipjs-api.metafloor.com/?bcid=code128&text='+encodeURIComponent(val)+'&scale=3&rotate=N&includetext=false';
+ img.style.display='block';
 }
 function resetScanner(){
  if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}
