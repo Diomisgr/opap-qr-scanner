@@ -27,6 +27,8 @@ input{width:100%;box-sizing:border-box;padding:15px;font-size:20px;text-align:ce
 <h1>Γρήγορο POS Barcode</h1>
 <p>Τράβα φωτογραφία μέσα από την εφαρμογή. Η εφαρμογή διαβάζει μόνο τη φωτογραφία και καθαρίζει τον κωδικό.</p>
 
+<button class="btn blue" onclick="openLens()">📷 ΑΝΟΙΞΕ GOOGLE LENS</button>
+<p style="font-size:14px;color:#666">Μετά την αντιγραφή από το Lens, επέστρεψε εδώ και κάνε επικόλληση.</p>
 <button class="btn blue" onclick="startCamera()">📸 ΑΝΟΙΞΕ ΚΑΜΕΡΑ</button>
 <div id="cameraBox" style="display:none">
 <video id="video" autoplay playsinline style="width:100%;border-radius:8px;background:#000"></video>
@@ -61,6 +63,14 @@ const photo=document.getElementById('photo');
 
 let cropper=null;
 let stream=null;
+function openLens(){
+  const urls=['googleapp://lens','google://lens'];
+  let i=0;
+  const t=setInterval(()=>{
+    if(i>=urls.length){clearInterval(t);status.textContent='Το Android δεν επέτρεψε άνοιγμα του Lens από browser. Για άμεσο άνοιγμα χρειάζεται Android εφαρμογή.';return;}
+    window.location.href=urls[i++];
+  },500);
+}
 
 async function startCamera(){
  try{
