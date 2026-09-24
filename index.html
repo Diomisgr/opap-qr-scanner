@@ -30,6 +30,9 @@ input[type=text]{width:100%;padding:16px;font-size:20px;text-align:center;border
 <button class="btn" id="readBtn" onclick="readNumbers()" style="display:none">🔎 ΔΙΑΒΑΣΕ ΑΡΙΘΜΟΥΣ</button>
 <div id="status"></div>
 <div id="detected" style="display:none;text-align:left;background:#f7f7f7;border-radius:8px;padding:12px;margin:10px 0"></div>
+<div id="cutHelp" style="display:none;text-align:left;background:#fff3cd;border-radius:8px;padding:10px;margin:10px 0;font-size:14px">
+<b>✂️ Διόρθωση τέλους:</b> Αν ο OCR πήρε παραπάνω ψηφία, πάτησε πάνω στον τελευταίο σωστό χαρακτήρα. Ο κωδικός θα κοπεί εκεί.
+</div>
 <input type="text" id="rf-input" placeholder="Ο κωδικός θα εμφανιστεί εδώ" autocomplete="off">
 <button class="btn" onclick="makeBarcode()">Δημιουργία Barcode</button>
 <div id="barcode-container">
@@ -68,9 +71,8 @@ async function readNumbers(){
   const found=detectPayment(raw);
   if(found){
     input.value=found.code;
-    document.getElementById('detected').style.display='block';
-    document.getElementById('detected').innerHTML='<b>Τύπος:</b> '+found.type+'<br><b>Κωδικός:</b> '+found.code+(found.amount?' <br><b>Ποσό:</b> '+found.amount:'');
-    statusEl.textContent='Βρέθηκε ο σωστός κωδικός. Έλεγξέ τον και πάτησε «Δημιουργία Barcode».';
+    showDetected(found);
+    statusEl.textContent='Βρέθηκε ο κωδικός. Αν έχει πάρει παραπάνω ψηφία, πάτησε τον τελευταίο σωστό χαρακτήρα.';
     makeBarcode();
   }else{
     statusEl.textContent='Δεν εντοπίστηκε RF, ΤΟ ή ΤΡΟ. Κράτησε όλο το κείμενο καθαρά στην κάμερα και ξαναδοκίμασε.';
@@ -121,6 +123,28 @@ function findAmount(raw){
        ||raw.match(/(?:ΠΟΣΟ|AMOUNT|ΣΥΝΟΛΟ)\s*[:\-]?\s*([0-9]{1,6}[.,][0-9]{2})/i);
  return m?m[1]+' €':'';
 }
+function showDetected(found){
+ const box=document.getElementById('detected');
+ const help=document.getElementById('cutHelp');
+ box.style.display='block'; help.style.display='block';
+ box.innerHTML='<b>Τύπος:</b> '+found.type+'<br><b>Κωδικός:</b> <span id="codeChars" style="font-size:20px;line-height:1.8;word-break:break-all"></span>'+(found.amount?' <br><b>Ποσό:</b> '+found.amount:'');
+ const chars=document.getElementById('codeChars');
+ [...found.code].forEach((ch,i)=>{
+   const s=document.createElement('span');
+   s.textContent=ch;
+   s.style.cursor='pointer';
+   s.style.padding='2px 1px';
+   s.title='Κόψε εδώ';
+   s.onclick=()=>{
+     const newCode=found.code.slice(0,i+1);
+     input.value=newCode;
+     [...chars.children].forEach((x,j)=>x.style.background=j<=i?'#d1fae5':'#f7b4b4');
+     statusEl.textContent='Κωδικός κόπηκε στο '+(i+1)+'ο χαρακτήρα. Έλεγξέ τον και πάτησε «Δημιουργία Barcode».';
+     makeBarcode();
+   };
+   chars.appendChild(s);
+ });
+}
 function makeBarcode(){
  let val=cleanText(input.value);
  if(val.length<20){alert('Ο κωδικός φαίνεται ελλιπής.');return}
@@ -132,7 +156,7 @@ function makeBarcode(){
 }
 function resetScanner(){
  if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}
- video.srcObject=null;input.value='';document.getElementById('barcode-container').style.display='none';
+ video.srcObject=null;input.value='';document.getElementById('barcode-container').style.display='none';document.getElementById('detected').style.display='none';document.getElementById('cutHelp').style.display='none';
  document.getElementById('scanbox').style.display='none';document.getElementById('openBtn').style.display='block';
  document.getElementById('readBtn').style.display='none';statusEl.textContent='';
 }
