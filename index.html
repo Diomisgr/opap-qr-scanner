@@ -14,8 +14,10 @@ h1{font-size:22px;color:#0056b3}
 .btn{border:0;color:#fff;background:#28a745;padding:15px;border-radius:8px;font-size:18px;font-weight:bold;width:100%;margin:7px 0}
 .blue{background:#0056b3}.gray{background:#6c757d}
 #photo{display:none;width:100%;height:auto;max-height:65vh;object-fit:contain;margin:10px 0;border-radius:8px}
-.crop-wrap{display:none;margin:10px 0}
-.crop-wrap img{display:block;max-width:100%;max-height:65vh}
+.crop-wrap{display:none;margin:10px 0;width:100%;height:62vh;min-height:360px;overflow:hidden;background:#222;border-radius:8px;position:relative}
+.crop-wrap img{display:block;max-width:none;width:100%;height:100%;object-fit:contain}
+.crop-wrap .cropper-container{width:100%!important;height:100%!important}
+.crop-wrap .cropper-canvas,.crop-wrap .cropper-crop-box{max-width:none}
 #cropBtn{display:none}
 textarea{width:100%;box-sizing:border-box;min-height:120px;font-size:18px;padding:10px}
 input{width:100%;box-sizing:border-box;padding:15px;font-size:20px;text-align:center;border:2px solid #0056b3;border-radius:8px}
@@ -94,7 +96,7 @@ function takePhoto(){
  document.getElementById('cropWrap').style.display='block';
  document.getElementById('cropBtn').style.display='block';
  document.getElementById('ocrBox').style.display='none';
- status.textContent='Τώρα σύρε το πλαίσιο μόνο πάνω στον αριθμό RF.';
+ status.textContent='Μεγάλωσε/μετακίνησε το πλαίσιο πάνω στον αριθμό RF. Η φωτογραφία είναι πλέον μεγάλη για να τον βλέπεις καθαρά.';
  photo.onload=()=>{
    if(typeof Cropper==="undefined"){status.textContent='❌ Δεν φορτώθηκε η επιλογή εικόνας.';return;}
    if(cropper) cropper.destroy();
