@@ -14,10 +14,8 @@ h1{font-size:22px;color:#0056b3}
 .btn{border:0;color:#fff;background:#28a745;padding:15px;border-radius:8px;font-size:18px;font-weight:bold;width:100%;margin:7px 0}
 .blue{background:#0056b3}.gray{background:#6c757d}
 #photo{display:none;width:100%;height:auto;max-height:65vh;object-fit:contain;margin:10px 0;border-radius:8px}
-.crop-wrap{display:none;margin:10px 0;width:100%;height:62vh;min-height:360px;overflow:hidden;background:#222;border-radius:8px;position:relative}
-.crop-wrap img{display:block;max-width:none;width:100%;height:100%;object-fit:contain}
-.crop-wrap .cropper-container{width:100%!important;height:100%!important}
-.crop-wrap .cropper-canvas,.crop-wrap .cropper-crop-box{max-width:none}
+.crop-wrap{display:none;margin:10px 0;width:100%;height:78vh;min-height:520px;overflow:hidden;background:#111;border-radius:8px;position:relative}
+.crop-wrap img{display:block;max-width:none!important;width:auto!important;height:auto!important}
 #cropBtn{display:none}
 textarea{width:100%;box-sizing:border-box;min-height:120px;font-size:18px;padding:10px}
 input{width:100%;box-sizing:border-box;padding:15px;font-size:20px;text-align:center;border:2px solid #0056b3;border-radius:8px}
@@ -101,10 +99,11 @@ function takePhoto(){
    if(typeof Cropper==="undefined"){status.textContent='❌ Δεν φορτώθηκε η επιλογή εικόνας.';return;}
    if(cropper) cropper.destroy();
    cropper=new Cropper(photo,{
-     viewMode:1,autoCropArea:0.35,responsive:true,movable:true,zoomable:true,
+     viewMode:0,autoCropArea:0.55,responsive:true,movable:true,zoomable:true,
      scalable:false,rotatable:false,background:false,guides:true,center:true,
      highlight:false,dragMode:'crop'
    });
+   setTimeout(()=>{try{cropper.zoomTo(0.6)}catch(e){}},100);
  };
 }
 
