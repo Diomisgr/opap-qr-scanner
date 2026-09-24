@@ -145,9 +145,9 @@ function detectPayment(raw){
  const rfMatches=[...text.matchAll(/RF\s*[:\-]?\s*([0-9][0-9\s\-]{15,})/g)];
  for(const rf of rfMatches){
    const digits=rf[1].replace(/[^0-9]/g,'');
-   // Τα RF που χρησιμοποιούμε εδώ είναι RF + 22 ψηφία. Δεν δεχόμαστε
-   // μικρότερο αποτέλεσμα, ώστε να μη δημιουργηθεί λάθος barcode.
-   if(digits.length===22)return {type:'RF',code:'RF'+digits,amount:findAmount(raw)};
+   // Δεν υπάρχει ανώτατο όριο μήκους για το RF. Κρατάμε μόνο έναν
+   // αρκετά μεγάλο αριθμητικό κωδικό ώστε να αποφεύγουμε ποσά/ημερομηνίες.
+   if(digits.length>=16)return {type:'RF',code:'RF'+digits,amount:findAmount(raw)};
  }
  // Greek labels may be OCR'd with Latin lookalikes. Search for ΤΟ / TRO / ΤΡΟ and take the
  // first long numeric sequence near the label, preferring 20+ digits.
@@ -202,8 +202,8 @@ function showDetected(found){
 }
 function makeBarcode(){
  let val=cleanText(input.value);
- if(/^RF/.test(val) && !/^RF[0-9]{22}$/.test(val)){
-   alert('Το RF πρέπει να έχει RF + 22 ψηφία. Ο κωδικός είναι ελλιπής ή έχει διαβαστεί λάθος.');
+ if(/^RF/.test(val) && !/^RF[0-9]{16,}$/.test(val)){
+   alert('Το RF φαίνεται ελλιπές. Έλεγξε όλα τα ψηφία πριν δημιουργήσεις το Barcode.');
    return;
  }
  if(val.length<20){alert('Ο κωδικός φαίνεται ελλιπής.');return}
