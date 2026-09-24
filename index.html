@@ -26,8 +26,10 @@ input[type=text]{width:100%;padding:16px;font-size:20px;text-align:center;border
 <h1>Γρήγορο POS Barcode</h1>
 <p>Άνοιξε την κάμερα και στόχευσε όλο το παραστατικό ή το μήνυμα. Αναγνωρίζει <b>RF</b>, <b>ΤΟ</b> και <b>ΤΡΟ</b> και ξεχωρίζει τον κωδικό από το ποσό.</p>
 <div class="scanbox" id="scanbox"><video id="camera" autoplay playsinline muted></video></div>
-<button class="btn btn-blue" id="openBtn" onclick="openCamera()">📷 Άνοιγμα Κάμερας</button>
-<button class="btn" id="readBtn" onclick="readNumbers()" style="display:none">🔎 ΔΙΑΒΑΣΕ ΑΡΙΘΜΟΥΣ</button>
+<input type="file" id="photoInput" accept="image/*" capture="environment" style="display:none">
+<button class="btn btn-blue" id="photoBtn" onclick="document.getElementById('photoInput').click()">📸 ΤΡΑΒΑ ΦΩΤΟΓΡΑΦΙΑ</button>
+<button class="btn" id="analyzeBtn" onclick="analyzePhoto()" style="display:none">🔎 ΑΝΑΛΥΣΗ ΦΩΤΟΓΡΑΦΙΑΣ</button>
+<button class="btn btn-gray" id="liveBtn" onclick="openCamera()" style="display:none">📷 Εναλλακτικά: Live Κάμερα</button>
 <div id="status"></div>
 <div id="detected" style="display:none;text-align:left;background:#f7f7f7;border-radius:8px;padding:12px;margin:10px 0"></div>
 <div id="cutHelp" style="display:none;text-align:left;background:#fff3cd;border-radius:8px;padding:10px;margin:10px 0;font-size:14px">
