@@ -24,8 +24,13 @@ input[type=text]{width:100%;padding:16px;font-size:20px;text-align:center;border
 <b>2.</b> Γύρνα εδώ και κάνε επικόλληση του κωδικού.<br>
 <b>3.</b> Η εφαρμογή καθαρίζει αυτόματα κενά, παύλες και τελείες και φτιάχνει Code 128.</p>
 
-<button class="btn btn-lens" onclick="openLens()">📷 ΑΝΟΙΓΜΑ GOOGLE LENS</button>
-<div id="lens-note">Με το πάτημα ανοίγει το Lens. Μετά την αντιγραφή, γύρνα σε αυτή τη σελίδα.</div>
+<button class="btn btn-lens" onclick="openCamera()">📷 ΦΩΤΟΓΡΑΦΙΑ ΕΓΓΡΑΦΟΥ</button>
+<div id="camera-area" style="display:none;margin:10px 0">
+  <input id="cameraInput" type="file" accept="image/*" capture="environment" style="display:none" onchange="photoTaken(event)">
+  <div id="photo-help" style="font-size:15px;color:#555;margin-bottom:10px">Βγάλε φωτογραφία. Μετά θα εμφανιστεί εδώ για να επιλέξεις την περιοχή του αριθμού.</div>
+  <img id="photoPreview" style="display:none;width:100%;max-height:55vh;object-fit:contain;border:2px solid #0056b3;border-radius:8px">
+  <button id="ocrBtn" class="btn" style="display:none" onclick="ocrPhoto()">🔎 ΔΙΑΒΑΣΕ ΤΟΝ ΕΠΙΛΕΓΜΕΝΟ ΑΡΙΘΜΟ</button>
+</div>
 
 <input type="text" id="rf-input" placeholder="ΕΠΙΚΟΛΛΗΣΗ ΚΩΔΙΚΟΥ ΕΔΩ" autocomplete="off">
 <button class="btn btn-blue" onclick="pasteClipboard()">📥 ΕΠΙΚΟΛΛΗΣΗ ΑΠΟ CLIPBOARD</button>
@@ -106,6 +111,54 @@ function resetScanner(){
   document.getElementById('barcode-container').style.display='none';
   document.getElementById('cleaned').style.display='none';
   statusEl.textContent='';
+}
+
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script>
+let photoFile=null;
+
+function openCamera(){
+  document.getElementById('cameraArea')?.scrollIntoView({behavior:'smooth'});
+  document.getElementById('camera-area').style.display='block';
+  document.getElementById('cameraInput').click();
+}
+
+function photoTaken(e){
+  const file=e.target.files?.[0];
+  if(!file)return;
+  photoFile=file;
+  const url=URL.createObjectURL(file);
+  const img=document.getElementById('photoPreview');
+  img.src=url;
+  img.style.display='block';
+  document.getElementById('ocrBtn').style.display='block';
+  statusEl.textContent='✅ Η φωτογραφία μπήκε στην εφαρμογή. Πάτησε «ΔΙΑΒΑΣΕ...» για OCR.';
+}
+
+async function ocrPhoto(){
+  if(!photoFile)return;
+  statusEl.textContent='⏳ Διαβάζω τη φωτογραφία...';
+  document.getElementById('ocrBtn').disabled=true;
+  try{
+    const result=await Tesseract.recognize(photoFile,'eng',{
+      logger:m=>{ if(m.status==='recognizing text') statusEl.textContent='⏳ OCR '+Math.round((m.progress||0)*100)+'%'; }
+    });
+    const text=result.data.text||'';
+    const lines=text.split(/\\n+/).map(s=>s.trim()).filter(Boolean);
+    const candidates=lines.filter(s=>/[A-Za-z0-9]/.test(s));
+    if(candidates.length){
+      input.value=candidates.join(' ');
+      makeBarcode();
+      statusEl.textContent='✅ Βρέθηκε κείμενο. Έλεγξε τον κωδικό πριν το POS.';
+    }else{
+      statusEl.textContent='Δεν βρέθηκε καθαρά κείμενο. Μπορείς να το επικολλήσεις χειροκίνητα στο πεδίο.';
+      input.focus();
+    }
+  }catch(err){
+    statusEl.textContent='Δεν μπόρεσα να διαβάσω τη φωτογραφία. Χρησιμοποίησε επικόλληση.';
+  }finally{
+    document.getElementById('ocrBtn').disabled=false;
+  }
 }
 </script>
 </body>
