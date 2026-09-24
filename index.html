@@ -48,22 +48,18 @@ const input=document.getElementById('rf-input');
 const statusEl=document.getElementById('status');
 
 function openLens(){
-  let returned=false;
-  const fallback=setTimeout(()=>{
-    if(!returned){
-      window.open('https://lens.google.com/','_blank');
-    }
-  },1200);
-
-  const onVisibility=()=>{
-    if(document.hidden){
-      returned=true;
-      clearTimeout(fallback);
-      document.removeEventListener('visibilitychange',onVisibility);
-    }
-  };
-  document.addEventListener('visibilitychange',onVisibility);
-  window.location.href='googleapp://lens';
+  // Προσπαθούμε πρώτα το direct Google Lens deep link.
+  // Το Chrome μπορεί να το δρομολογήσει στην εγκατεστημένη εφαρμογή Lens/Google.
+  const a=document.createElement('a');
+  a.href='google://lens';
+  a.style.display='none';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(()=>{
+    // Δεύτερη συμβατή διαδρομή, χωρίς να ανοίγουμε τη σελίδα lens.google.com.
+    try{ window.location.href='googleapp://lens'; }catch(e){}
+  },500);
+  setTimeout(()=>a.remove(),1500);
 }
 
 function cleanCode(value){
