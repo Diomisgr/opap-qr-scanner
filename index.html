@@ -56,16 +56,15 @@ async function analyzePhoto(){
  if(!photoImage){statusEl.textContent='Πρώτα τράβηξε φωτογραφία.';return}
  statusEl.textContent='Επεξεργάζομαι τη φωτογραφία...';
  const canvas=document.createElement('canvas');
- const maxW=1800, ow=photoImage.naturalWidth||photoImage.width, oh=photoImage.naturalHeight||photoImage.height;
+ const maxW=2200, ow=photoImage.naturalWidth||photoImage.width, oh=photoImage.naturalHeight||photoImage.height;
  const scale=Math.min(1,maxW/ow);
  canvas.width=Math.floor(ow*scale); canvas.height=Math.floor(oh*scale);
  const ctx=canvas.getContext('2d'); ctx.drawImage(photoImage,0,0,canvas.width,canvas.height);
  try{
-  const result=await Tesseract.recognize(canvas,'eng',{logger:m=>{if(m.status==='recognizing text')statusEl.textContent='OCR '+Math.round(m.progress*100)+'%...';}});
-  const raw=result.data.text||'';
+  const raw=await recognizeBest(canvas);
   const found=detectPayment(raw);
-  if(found){input.value=found.code;showDetected(found);statusEl.textContent='Βρέθηκε ο κωδικός. Αν χρειάζεται, διόρθωσε το τέλος.';makeBarcode();}
-  else{statusEl.textContent='Δεν βρέθηκε RF, ΤΟ ή ΤΡΟ. Τράβηξε πιο καθαρή φωτογραφία και πάτησε ξανά ΑΝΑΛΥΣΗ.';console.log(raw);}
+  if(found){input.value=found.code;showDetected(found);statusEl.textContent='Βρέθηκε ο κωδικός. Έλεγξέ τον πριν δημιουργήσεις το Barcode.';makeBarcode();}
+  else{statusEl.textContent='Δεν βρέθηκε πλήρης κωδικός. Τράβηξε πιο καθαρή φωτογραφία, ειδικά να φαίνεται και το τέλος του RF.';console.log(raw);}
  }catch(e){statusEl.textContent='Σφάλμα OCR: '+e.message;console.error(e);}
 }
 const video=document.getElementById('camera'),statusEl=document.getElementById('status'),input=document.getElementById('rf-input');
@@ -83,7 +82,7 @@ async function openCamera(){
 function cleanText(s){return s.toUpperCase().replace(/[^A-Z0-9]/g,'')}
 async function readNumbers(){
  if(!video.videoWidth){statusEl.textContent='Περίμενε να ανοίξει η κάμερα.';return}
- statusEl.textContent="Διαβάζω τον κωδικό...";;
+ statusEl.textContent="Διαβάζω τον κωδικό...";
  const canvas=document.createElement('canvas');
  const w=video.videoWidth,h=video.videoHeight;
  const cropY=Math.floor(h*.18), cropH=Math.floor(h*.64);
@@ -91,21 +90,48 @@ async function readNumbers(){
  const ctx=canvas.getContext('2d');
  ctx.drawImage(video,0,cropY,w,cropH,0,0,w,cropH);
  try{
-  const result=await Tesseract.recognize(canvas,'eng',{logger:m=>{
-   if(m.status==='recognizing text')statusEl.textContent='OCR '+Math.round(m.progress*100)+'%...';
-  }});
-  const raw=result.data.text||'';
+  const raw=await recognizeBest(canvas);
   const found=detectPayment(raw);
   if(found){
     input.value=found.code;
     showDetected(found);
-    statusEl.textContent='Βρέθηκε ο κωδικός. Αν έχει πάρει παραπάνω ψηφία, πάτησε τον τελευταίο σωστό χαρακτήρα.';
+    statusEl.textContent='Βρέθηκε ο κωδικός. Έλεγξέ τον πριν δημιουργήσεις το Barcode.';
     makeBarcode();
   }else{
-    statusEl.textContent='Δεν εντοπίστηκε RF, ΤΟ ή ΤΡΟ. Κράτησε όλο το κείμενο καθαρά στην κάμερα και ξαναδοκίμασε.';
+    statusEl.textContent='Δεν εντοπίστηκε πλήρης κωδικός. Βεβαιώσου ότι φαίνεται και το τέλος του RF.';
     console.log(raw);
   }
  }catch(e){statusEl.textContent='Σφάλμα OCR. Δοκίμασε ξανά.';console.error(e)}
+}
+async function recognizeBest(canvas){
+ const variants=[canvas];
+ // Δεύτερη λήψη με ενίσχυση αντίθεσης/ασπρόμαυρο ώστε να μη χάνεται το τέλος του RF.
+ const p=document.createElement('canvas');
+ p.width=canvas.width; p.height=canvas.height;
+ const px=p.getContext('2d');
+ px.drawImage(canvas,0,0);
+ const im=px.getImageData(0,0,p.width,p.height), d=im.data;
+ for(let i=0;i<d.length;i+=4){
+   const g=(d[i]*0.299+d[i+1]*0.587+d[i+2]*0.114);
+   const v=g>165?255:0;
+   d[i]=d[i+1]=d[i+2]=v;
+ }
+ px.putImageData(im,0,0);
+ variants.push(p);
+ let best='';
+ for(let i=0;i<variants.length;i++){
+   const result=await Tesseract.recognize(variants[i],'eng',{
+     logger:m=>{if(m.status==='recognizing text')statusEl.textContent='OCR '+Math.round(m.progress*100)+'%...';},
+     tessedit_pageseg_mode:'6',
+     tessedit_char_whitelist:'RF0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ- '
+   });
+   const raw=result.data.text||'';
+   const compact=normalizeOCR(raw).replace(/[^A-Z0-9]/g,'');
+   const rf=compact.match(/RF[0-9]{15,}/);
+   if(rf && rf[0].length>best.length) best=raw;
+   else if(!best) best=raw;
+ }
+ return best;
 }
 function normalizeOCR(s){
  return s.toUpperCase()
@@ -116,10 +142,12 @@ function detectPayment(raw){
  const text=normalizeOCR(raw);
  const compact=text.replace(/[\s\-–—:;,.()]/g,'');
  // RF: RF followed by a long alphanumeric identifier.
- const rf=text.match(/RF\s*[:\-]?\s*([A-Z0-9][A-Z0-9\s\-]{15,})/);
- if(rf){
-   const code=('RF'+rf[1]).replace(/[^A-Z0-9]/g,'');
-   if(code.length>=18)return {type:'RF',code,amount:findAmount(raw)};
+ const rfMatches=[...text.matchAll(/RF\s*[:\-]?\s*([0-9][0-9\s\-]{15,})/g)];
+ for(const rf of rfMatches){
+   const digits=rf[1].replace(/[^0-9]/g,'');
+   // Τα RF που χρησιμοποιούμε εδώ είναι RF + 22 ψηφία. Δεν δεχόμαστε
+   // μικρότερο αποτέλεσμα, ώστε να μη δημιουργηθεί λάθος barcode.
+   if(digits.length===22)return {type:'RF',code:'RF'+digits,amount:findAmount(raw)};
  }
  // Greek labels may be OCR'd with Latin lookalikes. Search for ΤΟ / TRO / ΤΡΟ and take the
  // first long numeric sequence near the label, preferring 20+ digits.
@@ -174,6 +202,10 @@ function showDetected(found){
 }
 function makeBarcode(){
  let val=cleanText(input.value);
+ if(/^RF/.test(val) && !/^RF[0-9]{22}$/.test(val)){
+   alert('Το RF πρέπει να έχει RF + 22 ψηφία. Ο κωδικός είναι ελλιπής ή έχει διαβαστεί λάθος.');
+   return;
+ }
  if(val.length<20){alert('Ο κωδικός φαίνεται ελλιπής.');return}
  input.value=val;
  document.getElementById('barcode-container').style.display='block';
