@@ -30,7 +30,10 @@ input{width:100%;box-sizing:border-box;padding:15px;font-size:20px;text-align:ce
 <input type="file" id="photoInput" accept="image/*" capture="environment" style="display:none">
 <button class="btn blue" onclick="document.getElementById('photoInput').click()">📸 ΤΡΑΒΑ ΦΩΤΟΓΡΑΦΙΑ</button>
 
+<div class="crop-wrap" id="cropWrap">
 <img id="photo">
+</div>
+<button id="cropBtn" class="btn" onclick="readSelected()" style="display:none">✂️ ΕΠΙΛΕΞΕ ΤΟΝ ΑΡΙΘΜΟ & ΔΙΑΒΑΣΕ</button>
 <div id="status"></div>
 
 <div id="ocrBox" style="display:none;text-align:left">
@@ -62,7 +65,8 @@ document.getElementById('photoInput').addEventListener('change',e=>{
  document.getElementById('cropBtn').style.display='block';
  document.getElementById('ocrBox').style.display='none';
  status.textContent='Σύρε το πλαίσιο πάνω στον αριθμό RF. Μετά πάτησε «ΕΠΙΛΕΞΕ...».';
- photo.onload=()=>{\n   if(typeof Cropper==="undefined"){status.textContent="❌ Δεν φορτώθηκε το εργαλείο επιλογής. Κάνε ανανέωση.";return;}
+ photo.onload=()=>{
+   if(typeof Cropper==="undefined"){status.textContent="❌ Δεν φορτώθηκε το εργαλείο επιλογής. Κάνε ανανέωση.";return;}
    if(cropper) cropper.destroy();
    cropper=new Cropper(photo,{
      viewMode:1,
