@@ -27,8 +27,11 @@ input{width:100%;box-sizing:border-box;padding:15px;font-size:20px;text-align:ce
 <h1>Γρήγορο POS Barcode</h1>
 <p>Τράβα φωτογραφία μέσα από την εφαρμογή. Η εφαρμογή διαβάζει μόνο τη φωτογραφία και καθαρίζει τον κωδικό.</p>
 
-<input type="file" id="photoInput" accept="image/*" capture="environment" style="display:none">
-<button class="btn blue" onclick="document.getElementById('photoInput').click()">📸 ΤΡΑΒΑ ΦΩΤΟΓΡΑΦΙΑ</button>
+<button class="btn blue" onclick="startCamera()">📸 ΑΝΟΙΞΕ ΚΑΜΕΡΑ</button>
+<div id="cameraBox" style="display:none">
+<video id="video" autoplay playsinline style="width:100%;border-radius:8px;background:#000"></video>
+<button class="btn" onclick="takePhoto()">📸 ΤΡΑΒΗΞΕ ΦΩΤΟ</button>
+</div>
 
 <div class="crop-wrap" id="cropWrap">
 <img id="photo">
@@ -57,34 +60,51 @@ const status=document.getElementById('status');
 const photo=document.getElementById('photo');
 
 let cropper=null;
-document.getElementById('photoInput').addEventListener('change',e=>{
- const f=e.target.files&&e.target.files[0]; if(!f)return;
- const url=URL.createObjectURL(f);
- photo.src=url;
+let stream=null;
+
+async function startCamera(){
+ try{
+   if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
+     status.textContent='❌ Η κάμερα δεν υποστηρίζεται εδώ.';
+     return;
+   }
+   document.getElementById('cameraBox').style.display='block';
+   status.textContent='Ζητάω άδεια για την κάμερα...';
+   stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1920}},audio:false});
+   document.getElementById('video').srcObject=stream;
+   status.textContent='Στόχευσε τον αριθμό RF και πάτησε «ΤΡΑΒΗΞΕ ΦΩΤΟ».';
+ }catch(err){
+   document.getElementById('cameraBox').style.display='none';
+   status.textContent='❌ Δεν άνοιξε η κάμερα. Έλεγξε την άδεια κάμερας του Chrome.';
+ }
+}
+
+function takePhoto(){
+ const video=document.getElementById('video');
+ if(!video.videoWidth){status.textContent='Περίμενε να ανοίξει η κάμερα.';return}
+ const canvas=document.createElement('canvas');
+ const max=2200;
+ const s=Math.min(1,max/video.videoWidth);
+ canvas.width=Math.round(video.videoWidth*s);
+ canvas.height=Math.round(video.videoHeight*s);
+ canvas.getContext('2d').drawImage(video,0,0,canvas.width,canvas.height);
+ if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}
+ document.getElementById('cameraBox').style.display='none';
+ photo.src=canvas.toDataURL('image/jpeg',0.95);
  document.getElementById('cropWrap').style.display='block';
  document.getElementById('cropBtn').style.display='block';
  document.getElementById('ocrBox').style.display='none';
- status.textContent='Σύρε το πλαίσιο πάνω στον αριθμό RF. Μετά πάτησε «ΕΠΙΛΕΞΕ...».';
+ status.textContent='Τώρα σύρε το πλαίσιο μόνο πάνω στον αριθμό RF.';
  photo.onload=()=>{
-   if(typeof Cropper==="undefined"){status.textContent="❌ Δεν φορτώθηκε το εργαλείο επιλογής. Κάνε ανανέωση.";return;}
+   if(typeof Cropper==="undefined"){status.textContent='❌ Δεν φορτώθηκε η επιλογή εικόνας.';return;}
    if(cropper) cropper.destroy();
    cropper=new Cropper(photo,{
-     viewMode:1,
-     autoCropArea:0.35,
-     responsive:true,
-     movable:true,
-     zoomable:true,
-     scalable:false,
-     rotatable:false,
-     background:false,
-     guides:true,
-     center:true,
-     highlight:false,
-     dragMode:'crop'
+     viewMode:1,autoCropArea:0.35,responsive:true,movable:true,zoomable:true,
+     scalable:false,rotatable:false,background:false,guides:true,center:true,
+     highlight:false,dragMode:'crop'
    });
  };
- photo.onerror=()=>status.textContent='Δεν μπόρεσα να ανοίξω τη φωτογραφία.';
-});
+}
 
 async function readSelected(){
  if(!cropper){status.textContent='Πρώτα βγάλε φωτογραφία.';return}
@@ -136,7 +156,8 @@ function makeBarcode(){
  status.textContent='✅ Barcode έτοιμο.';
 }
 function resetAll(){
- document.getElementById('photoInput').value='';
+ if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}
+ document.getElementById('cameraBox').style.display='none';
  document.getElementById('cropWrap').style.display='none';
  document.getElementById('cropBtn').style.display='none';
  if(cropper){cropper.destroy();cropper=null}
