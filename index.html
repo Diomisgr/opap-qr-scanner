@@ -31,11 +31,18 @@ input[type=text]{width:100%;padding:16px;font-size:20px;text-align:center;border
 <button class="btn" id="analyzeBtn" onclick="analyzePhoto()" style="display:none">🔎 ΑΝΑΛΥΣΗ ΦΩΤΟΓΡΑΦΙΑΣ</button>
 <button class="btn btn-gray" id="liveBtn" onclick="openCamera()" style="display:none">📷 Εναλλακτικά: Live Κάμερα</button>
 <div id="status"></div>
+<div id="ocrBox" style="display:none;text-align:left;background:#eef6ff;border-radius:8px;padding:12px;margin:10px 0">
+<b>📄 OCR κείμενο:</b>
+<textarea id="ocrText" style="width:100%;min-height:130px;box-sizing:border-box;margin-top:8px;padding:10px;font-size:16px;border:1px solid #aaa;border-radius:8px"></textarea>
+<button class="btn btn-blue" onclick="copyOCR()" style="margin-top:8px">📋 ΑΝΤΙΓΡΑΦΗ OCR</button>
+<p style="font-size:14px;margin:6px 0 0">Μετά την αντιγραφή, πάτησε «ΕΠΙΚΟΛΛΗΣΗ» για να βάλουμε ακριβώς το κείμενο στον κωδικό.</p>
+</div>
 <div id="detected" style="display:none;text-align:left;background:#f7f7f7;border-radius:8px;padding:12px;margin:10px 0"></div>
 <div id="cutHelp" style="display:none;text-align:left;background:#fff3cd;border-radius:8px;padding:10px;margin:10px 0;font-size:14px">
 <b>✂️ Διόρθωση τέλους:</b> Αν ο OCR πήρε παραπάνω ψηφία, πάτησε πάνω στον τελευταίο σωστό χαρακτήρα. Ο κωδικός θα κοπεί εκεί.
 </div>
-<input type="text" id="rf-input" placeholder="Ο κωδικός θα εμφανιστεί εδώ" autocomplete="off">
+<input type="text" id="rf-input" placeholder="Εδώ θα κάνουμε επικόλληση του OCR" autocomplete="off">
+<button class="btn btn-blue" onclick="pasteOCR()">📥 ΕΠΙΚΟΛΛΗΣΗ OCR</button>
 <button class="btn" onclick="makeBarcode()">Δημιουργία Barcode</button>
 <div id="barcode-container">
 <img id="barcodeImg" style="display:block;max-width:100%;height:auto;margin:auto" alt="CODE 128">
@@ -63,8 +70,10 @@ async function analyzePhoto(){
  try{
   const raw=await recognizeBest(canvas);
   const found=detectPayment(raw);
-  if(found){input.value=found.code;showDetected(found);statusEl.textContent='Βρέθηκε ο κωδικός. Έλεγξέ τον πριν δημιουργήσεις το Barcode.';makeBarcode();}
-  else{statusEl.textContent='Δεν βρέθηκε πλήρης κωδικός. Τράβηξε πιο καθαρή φωτογραφία, ειδικά να φαίνεται και το τέλος του RF.';console.log(raw);}
+  document.getElementById('ocrBox').style.display='block';
+  document.getElementById('ocrText').value=raw;
+  if(found){showDetected(found);statusEl.textContent='Το OCR διάβασε το κείμενο. Κάνε ΑΝΤΙΓΡΑΦΗ και μετά ΕΠΙΚΟΛΛΗΣΗ για να ελέγξουμε τον αριθμό.';}
+  else{statusEl.textContent='Δεν εντοπίστηκε αυτόματα κωδικός. Κάνε ΑΝΤΙΓΡΑΦΗ του OCR για να δούμε ακριβώς τι διάβασε.';console.log(raw);}
  }catch(e){statusEl.textContent='Σφάλμα OCR: '+e.message;console.error(e);}
 }
 const video=document.getElementById('camera'),statusEl=document.getElementById('status'),input=document.getElementById('rf-input');
@@ -74,8 +83,6 @@ async function openCamera(){
   video.srcObject=stream;
   document.getElementById('scanbox').style.display='block';
   video.style.display='block';
-  document.getElementById('openBtn').style.display='none';
-  document.getElementById('readBtn').style.display='block';
   statusEl.textContent='Κάμερα ενεργή — βάλε τους αριθμούς μέσα στο πράσινο πλαίσιο.';
  }catch(e){statusEl.textContent='Δεν δόθηκε άδεια στην κάμερα. Έλεγξε την άδεια κάμερας του Chrome.';console.error(e)}
 }
@@ -200,6 +207,21 @@ function showDetected(found){
    chars.appendChild(s);
  });
 }
+async function copyOCR(){
+ const text=document.getElementById('ocrText').value;
+ if(!text){statusEl.textContent='Δεν υπάρχει OCR κείμενο για αντιγραφή.';return}
+ try{await navigator.clipboard.writeText(text);statusEl.textContent='✅ Το OCR αντιγράφηκε. Τώρα πάτησε «ΕΠΙΚΟΛΛΗΣΗ OCR».';}
+ catch(e){document.getElementById('ocrText').focus();document.getElementById('ocrText').select();statusEl.textContent='Πάτησε παρατεταμένα/δεξί κλικ και επίλεξε Αντιγραφή.';}
+}
+async function pasteOCR(){
+ try{
+   const text=await navigator.clipboard.readText();
+   document.getElementById('ocrText').value=text;
+   const found=detectPayment(text);
+   if(found){input.value=found.code;showDetected(found);statusEl.textContent='✅ Έγινε επικόλληση. Έλεγξε τον αριθμό και μετά πάτησε «Δημιουργία Barcode».';}
+   else{input.value=cleanText(text);statusEl.textContent='Έγινε επικόλληση. Έλεγξε τον κωδικό χειροκίνητα.';}
+ }catch(e){statusEl.textContent='Δεν επιτράπηκε αυτόματη επικόλληση. Πάτησε μέσα στο πεδίο και κάνε κανονικό Ctrl+V/Επικόλληση.';input.focus();}
+}
 function makeBarcode(){
  let val=cleanText(input.value);
  if(/^RF/.test(val) && !/^RF[0-9]{16,}$/.test(val)){
@@ -215,9 +237,10 @@ function makeBarcode(){
 }
 function resetScanner(){
  if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}
- video.srcObject=null;input.value='';document.getElementById('barcode-container').style.display='none';document.getElementById('detected').style.display='none';document.getElementById('cutHelp').style.display='none';
- document.getElementById('scanbox').style.display='none';document.getElementById('openBtn').style.display='block';
- document.getElementById('readBtn').style.display='none';statusEl.textContent='';
+ video.srcObject=null;input.value='';document.getElementById('barcode-container').style.display='none';document.getElementById('detected').style.display='none';document.getElementById('ocrBox').style.display='none';document.getElementById('ocrText').value='';document.getElementById('cutHelp').style.display='none';
+ document.getElementById('scanbox').style.display='none';
+ document.getElementById('analyzeBtn').style.display='none';
+ document.getElementById('photoInput').value='';photoImage=null;statusEl.textContent='';
 }
 </script>
 </body>
