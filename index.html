@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
 <title>POS Barcode</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/[email protected]/dist/cropper.min.css">
+<script src="https://cdn.jsdelivr.net/npm/[email protected]/dist/cropper.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <style>
 body{font-family:Arial,sans-serif;text-align:center;padding:12px;background:#f0f2f5;color:#333;margin:0}
@@ -11,7 +13,10 @@ body{font-family:Arial,sans-serif;text-align:center;padding:12px;background:#f0f
 h1{font-size:22px;color:#0056b3}
 .btn{border:0;color:#fff;background:#28a745;padding:15px;border-radius:8px;font-size:18px;font-weight:bold;width:100%;margin:7px 0}
 .blue{background:#0056b3}.gray{background:#6c757d}
-#photo{display:none;width:100%;max-height:60vh;object-fit:contain;margin:10px 0;border-radius:8px}
+#photo{display:none;width:100%;height:auto;max-height:65vh;object-fit:contain;margin:10px 0;border-radius:8px}
+.crop-wrap{display:none;margin:10px 0}
+.crop-wrap img{display:block;max-width:100%;max-height:65vh}
+#cropBtn{display:none}
 textarea{width:100%;box-sizing:border-box;min-height:120px;font-size:18px;padding:10px}
 input{width:100%;box-sizing:border-box;padding:15px;font-size:20px;text-align:center;border:2px solid #0056b3;border-radius:8px}
 #barcode{display:none;margin-top:15px;padding:10px;background:#fff}
@@ -48,27 +53,63 @@ const input=document.getElementById('code');
 const status=document.getElementById('status');
 const photo=document.getElementById('photo');
 
-document.getElementById('photoInput').addEventListener('change',async e=>{
+let cropper=null;
+document.getElementById('photoInput').addEventListener('change',e=>{
  const f=e.target.files&&e.target.files[0]; if(!f)return;
- photo.src=URL.createObjectURL(f); photo.style.display='block';
- status.textContent='Διαβάζω τη φωτογραφία...';
- const img=new Image(); img.onload=async()=>{
-   const canvas=document.createElement('canvas');
-   const max=1800, s=Math.min(1,max/img.width);
-   canvas.width=Math.round(img.width*s); canvas.height=Math.round(img.height*s);
-   canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
-   try{
-     const r=await Tesseract.recognize(canvas,'eng',{tessedit_pageseg_mode:'6',tessedit_char_whitelist:'RF0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ.- '});
-     const raw=r.data.text||'';
-     document.getElementById('ocrBox').style.display='block';
-     document.getElementById('ocrText').value=raw;
-     const found=findCode(raw);
-     if(found){input.value=clean(found);status.textContent='Έτοιμο. Έλεγξε τον αριθμό πριν το Barcode.';}
-     else status.textContent='Δεν βρέθηκε αυτόματα. Αντέγραψε/έλεγξε το κείμενο παραπάνω.';
-   }catch(err){status.textContent='Σφάλμα ανάγνωσης.'}
+ const url=URL.createObjectURL(f);
+ photo.src=url;
+ document.getElementById('cropWrap').style.display='block';
+ document.getElementById('cropBtn').style.display='block';
+ document.getElementById('ocrBox').style.display='none';
+ status.textContent='Σύρε το πλαίσιο πάνω στον αριθμό RF. Μετά πάτησε «ΕΠΙΛΕΞΕ...».';
+ photo.onload=()=>{
+   if(cropper) cropper.destroy();
+   cropper=new Cropper(photo,{
+     viewMode:1,
+     autoCropArea:0.35,
+     responsive:true,
+     movable:true,
+     zoomable:true,
+     scalable:false,
+     rotatable:false,
+     background:false,
+     guides:true,
+     center:true,
+     highlight:false,
+     dragMode:'crop'
+   });
  };
- img.src=photo.src;
+ photo.onerror=()=>status.textContent='Δεν μπόρεσα να ανοίξω τη φωτογραφία.';
 });
+
+async function readSelected(){
+ if(!cropper){status.textContent='Πρώτα βγάλε φωτογραφία.';return}
+ const btn=document.getElementById('cropBtn');
+ btn.disabled=true;
+ status.textContent='⏳ Διαβάζω μόνο την επιλεγμένη περιοχή...';
+ try{
+   const canvas=cropper.getCroppedCanvas({maxWidth:1800,maxHeight:800,imageSmoothingEnabled:true,imageSmoothingQuality:'high'});
+   const r=await Tesseract.recognize(canvas,'eng',{
+     tessedit_pageseg_mode:'7',
+     tessedit_char_whitelist:'RF0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ.- '
+   });
+   const raw=(r.data.text||'').trim();
+   document.getElementById('ocrBox').style.display='block';
+   document.getElementById('ocrText').value=raw;
+   const found=findCode(raw);
+   if(found){
+     input.value=clean(found);
+     status.textContent='✅ Βρέθηκε ο αριθμός. Έλεγξέ τον και μετά δημιούργησε Barcode.';
+   }else{
+     input.value=clean(raw);
+     status.textContent='⚠️ Δεν αναγνωρίστηκε καθαρά. Διόρθωσέ τον στο πεδίο «Κωδικός».';
+   }
+ }catch(err){
+   status.textContent='❌ Σφάλμα ανάγνωσης της επιλογής.';
+ }finally{
+   btn.disabled=false;
+ }
+}
 
 function clean(v){return v.toUpperCase().replace(/[\s.\-–—_/:;,]+/g,'').replace(/[^A-Z0-9]/g,'');}
 function findCode(raw){
@@ -92,7 +133,10 @@ function makeBarcode(){
 }
 function resetAll(){
  document.getElementById('photoInput').value='';
- photo.style.display='none';document.getElementById('ocrBox').style.display='none';
+ document.getElementById('cropWrap').style.display='none';
+ document.getElementById('cropBtn').style.display='none';
+ if(cropper){cropper.destroy();cropper=null}
+ document.getElementById('ocrBox').style.display='none';
  document.getElementById('ocrText').value='';input.value='';
  document.getElementById('barcode').style.display='none';status.textContent='';
 }
