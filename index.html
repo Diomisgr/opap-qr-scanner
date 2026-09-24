@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
 <title>POS Barcode</title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/[email protected]/dist/cropper.min.css">
-<script src="https://cdn.jsdelivr.net/npm/[email protected]/dist/cropper.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.css">
+<script src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <style>
 body{font-family:Arial,sans-serif;text-align:center;padding:12px;background:#f0f2f5;color:#333;margin:0}
@@ -62,7 +62,7 @@ document.getElementById('photoInput').addEventListener('change',e=>{
  document.getElementById('cropBtn').style.display='block';
  document.getElementById('ocrBox').style.display='none';
  status.textContent='Σύρε το πλαίσιο πάνω στον αριθμό RF. Μετά πάτησε «ΕΠΙΛΕΞΕ...».';
- photo.onload=()=>{
+ photo.onload=()=>{\n   if(typeof Cropper==="undefined"){status.textContent="❌ Δεν φορτώθηκε το εργαλείο επιλογής. Κάνε ανανέωση.";return;}
    if(cropper) cropper.destroy();
    cropper=new Cropper(photo,{
      viewMode:1,
